@@ -2,6 +2,10 @@ package DocumentCompare;
 import java.io.*;
 import java.util.*;
 
+import Gui.DocumentComparisonSwing;
+import Gui.TermIDF;
+import Gui.TfIdf;
+
 public class Main {
 
 
@@ -50,46 +54,26 @@ public class Main {
 
     public static void main(String[] args) throws Exception{
         File folder = new File("TFIDF");
+        File file = new File("TFIDF/01_sports_basketball_game_report.txt"); 
 
         
         for(File doc : folder.listFiles()){
-            
-            readFile(doc);
-        }
+        
 
+            readFile(doc);
+
+        }
+    
         generateValues();
         fixLex();
 
 
-
-        //descending order with priorty queue
-
-        File file = new File("TFIDF/01_sports_basketball_game_report.txt"); 
-        HashMap<Double, File> cosinePerDocforDoc= compareDocumentToCorpus(file);
-        PriorityQueue<Double> desecendinglist = new PriorityQueue<>();
-
-
-        for(Double f: cosinePerDocforDoc.keySet()){
-            desecendinglist.add(f); 
-
-        }
-
-        for(Double f: cosinePerDocforDoc.keySet()){
-            System.out.println(cosinePerDocforDoc.get(f)); 
-            System.out.println(desecendinglist.poll());
-        }
-
-        
-
-
-        
-
-        System.out.println(file + " comparative"); 
-
+        HashMap<File, Double> cosinePerDocforDoc = compareDocumentToCorpus(file);
 
 
         new TermIDF(idfWordMap, lexicon);
         new TfIdf(DocWordValues, lexicon);
+        new DocumentComparisonSwing(cosinePerDocforDoc, file);
     }
     
     public static void readFile(File filename) throws Exception{   // GOOD Don't change i think
@@ -149,7 +133,6 @@ public class Main {
                 
                 
             }
-            line = br.readLine();
             outerHashMap.put(filename, perDoc);
 
             
@@ -167,27 +150,7 @@ public class Main {
 
         //removes words from lexicon in which the document dont have in common 
 
-        for(String word: innerHashMap.keySet()){
-
-            int nulls = 0;
-            for(File doc: DocWordValues.keySet()){
-
-                if(DocWordValues.get(doc).get(word) == null){
-
-                    nulls ++; 
-                }
-
-
-
-
-            }
-
-            if(DocWordValues.size() - nulls  > 2){
-                lexicon.remove(word);
-            }
-
-
-        }
+       
 
 
         //remove words only in one doucment, and only appear once 
@@ -202,10 +165,12 @@ public class Main {
 
     }
 
-    public static HashMap<Double, File> compareDocumentToCorpus(File DOC){
+
+    //calulates cosine similarity 
+    public static HashMap<File, Double> compareDocumentToCorpus(File DOC){
  
 
-        HashMap<Double, File> docSimilarity = new HashMap<>(); 
+        HashMap<File, Double> docSimilarity = new HashMap<>(); 
         double docAMag = 0; ;
 
         //document magnitude
@@ -217,23 +182,11 @@ public class Main {
                 docAMag += Math.pow(DocWordValues.get(DOC).get(word).getRtfIdf(), 2.0); 
 
             }
-            else{
-
-                docAMag += 0; 
-
-
-            }
-
-
         }
-       
 
         docAMag = Math.sqrt(docAMag); 
 
-        //end of document magnitude 
 
-
-        //magnitudes and dot product for all documents in corpus
         for(File doc: DocWordValues.keySet()){
 
             
@@ -244,28 +197,22 @@ public class Main {
             double dotProduct = 0; 
             double magnitude = 0; 
 
-            try{
 
             for(String word:DocWordValues.get(doc).keySet()){
 
-                if(DocWordValues.get(DOC).get(word) == null){
-                    continue;
-                }
-                else{
+                if(DocWordValues.get(DOC).get(word) != null){
                     dotProduct += DocWordValues.get(doc).get(word).rtfIdf * DocWordValues.get(DOC).get(word).rtfIdf; 
                 }
+             
+                if(DocWordValues.get(DOC).get(word) != null){
 
-                magnitude += Math.pow(DocWordValues.get(doc).get(word).rtfIdf, 2.0);
-            
-            }
-            } catch(NullPointerException e){
-                System.out.println("Invalid Input corp");
-
+                    magnitude += Math.pow(DocWordValues.get(doc).get(word).rtfIdf, 2.0);
+                }
             }
 
             magnitude = Math.sqrt(magnitude); 
 
-            docSimilarity.put(dotProduct/(magnitude* docAMag), doc); 
+            docSimilarity.put(doc, dotProduct/ (magnitude * docAMag)); 
 
         }
 
