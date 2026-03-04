@@ -7,4 +7,5 @@ Day 3: Neighborhood exploration by public transit. Stop at a bookstore, a
 small gallery, and a park. Before departure, review the budget, receipts, and
 souvenirs.
 Travel keywords: itinerary, transit, lodging, reservations, budget, walking,
-maps, and time zones.
+maps, and time zones. 
+help

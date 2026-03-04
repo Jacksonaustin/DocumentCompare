@@ -3,8 +3,6 @@ import java.io.*;
 import java.util.*;
 
 import Gui.DocumentComparisonSwing;
-import Gui.TermIDF;
-import Gui.TfIdf;
 
 public class Main {
 
@@ -35,16 +33,15 @@ public class Main {
     }
 
 
-
-    // make them as clean as possible so you can validate the calculations on paper
+    // word count per document 
     static HashMap<File, HashMap<String, Integer>> outerHashMap = new HashMap<>(); //document // word, count 
+    //every token read 
     static HashMap<String, Integer> innerHashMap = new HashMap<>(); //word, count
+    //lexicon 
     static HashSet<String> lexicon = new HashSet<>(); // lexicon 
     //each word idf value
     static HashMap<String, Double> idfWordMap = new HashMap<>();
-
-
-    //store both the rtf and rtf * idf for a given word for each document 
+    //stores both the rtf and rtf * idf for a given word for each document 
     static HashMap<File, HashMap<String, ValuesforWords>> DocWordValues = new HashMap<>(); //doc to a arraylist which holds the idf and rtf for each word
 
 
@@ -53,26 +50,36 @@ public class Main {
 
 
     public static void main(String[] args) throws Exception{
+
+        //read documents folder 
         File folder = new File("TFIDF");
+
+        //read comparsion document
         File file = new File("TFIDF/01_sports_basketball_game_report.txt"); 
 
-        
+        //read docs 
         for(File doc : folder.listFiles()){
         
 
             readFile(doc);
 
         }
-    
-        generateValues();
+
+        generateIdfMap(); 
+
+        //optimizes lexicon 
         fixLex();
 
 
+        // calucles rtf, idf, and RTF-IDF 
+        generateValues();
+        
+
+        //calculates the cosine similarty between the comparsion docs and the documents folder 
         HashMap<File, Double> cosinePerDocforDoc = compareDocumentToCorpus(file);
 
 
-        new TermIDF(idfWordMap, lexicon);
-        new TfIdf(DocWordValues, lexicon);
+        //gui 
         new DocumentComparisonSwing(cosinePerDocforDoc, file);
     }
     
@@ -81,7 +88,7 @@ public class Main {
         BufferedReader br = new BufferedReader(fr);
         String line;
 
-         
+        //unimportant words 
         String[] ignore ={"of", "from", "and", "the", "if", "of", "from", "by", "or", "am", "is",    
         "is","it","its","itself","just","me","more","most","my","myself",
         "no","nor","not","now","of","off","on","once","only","or","other",
@@ -146,22 +153,24 @@ public class Main {
     public static void fixLex(){
 
 
+        //removes words from lexicon which idf value is equal to being in every single document
+        // if its in all docs it really doesn't matter in out comparison  
 
+        ArrayList<String> removeList = new ArrayList<>();
 
-        //removes words from lexicon in which the document dont have in common 
+        for(String word: idfWordMap.keySet()){
+            
+            if(idfWordMap.get(word) == 0){
+                removeList.add(word);
 
-       
+            }
+        }
 
-
-        //remove words only in one doucment, and only appear once 
-        
-
-
-        
-
-
-
-
+        //removes word
+        for(String word: removeList){
+            idfWordMap.remove(word);
+            lexicon.remove(word); 
+        }
 
     }
 
@@ -171,15 +180,18 @@ public class Main {
  
 
         HashMap<File, Double> docSimilarity = new HashMap<>(); 
+
         double docAMag = 0; ;
 
-        //document magnitude
-     
-        for(String word: DocWordValues.get(DOC).keySet()){
-            
-            if(DocWordValues.get(DOC).get(word) != null){
+        //caluclte rtf rtf-idf values for comparsion document 
+        HashMap<String, ValuesforWords> comparisonValues = generateValuesForWords(DOC); 
 
-                docAMag += Math.pow(DocWordValues.get(DOC).get(word).getRtfIdf(), 2.0); 
+        //document magnitude
+        for(String word: comparisonValues.keySet()){
+            
+            if(comparisonValues.get(word) != null){
+
+                docAMag += Math.pow(comparisonValues.get(word).getRtfIdf(), 2.0); 
 
             }
         }
@@ -187,12 +199,10 @@ public class Main {
         docAMag = Math.sqrt(docAMag); 
 
 
-        for(File doc: DocWordValues.keySet()){
+        
 
-            
-            if(doc == DOC){
-                continue; 
-            }
+        // documents magnitude and dot product between comparsion document 
+        for(File doc: DocWordValues.keySet()){
 
             double dotProduct = 0; 
             double magnitude = 0; 
@@ -200,11 +210,11 @@ public class Main {
 
             for(String word:DocWordValues.get(doc).keySet()){
 
-                if(DocWordValues.get(DOC).get(word) != null){
-                    dotProduct += DocWordValues.get(doc).get(word).rtfIdf * DocWordValues.get(DOC).get(word).rtfIdf; 
+                if(comparisonValues.get(word) != null){
+                    dotProduct += DocWordValues.get(doc).get(word).rtfIdf * comparisonValues.get(word).rtfIdf; 
                 }
              
-                if(DocWordValues.get(DOC).get(word) != null){
+                if(comparisonValues.get(word) != null){
 
                     magnitude += Math.pow(DocWordValues.get(doc).get(word).rtfIdf, 2.0);
                 }
@@ -245,28 +255,32 @@ public class Main {
         return totalCountOfWord/totalTokensofDoc; 
 
     } 
-
-        //caluclate relative term frequency per word and idf
-
     
 
+    //generates values for comparison doc and removes it from affecting the results 
+    public static HashMap<String, ValuesforWords> generateValuesForWords(File doc){
+
+        HashMap<String, ValuesforWords> forWord = new HashMap<>(); 
 
 
+        for(String word: outerHashMap.get(doc).keySet()){
 
+            double rtf = RTF(word, doc); 
+            double idf = IDF(word); 
 
+            ValuesforWords value = new ValuesforWords(rtf * idf,rtf); 
 
-    public static void generateValues(){
+            forWord.put(word, value);
 
-
-        HashMap<String, Double> idfMap = new HashMap<>();
-        for(String word: lexicon){
-            
-            Double idf = IDF(word);
-
-            idfMap.put(word, idf );
         }
 
-        idfWordMap = idfMap;
+        DocWordValues.remove(doc); 
+
+        return forWord; 
+    }
+
+    // populate values for each word in each document  
+    public static void generateValues(){
 
 
         for(File file: outerHashMap.keySet()){
@@ -274,17 +288,17 @@ public class Main {
             HashMap<String, ValuesforWords> wordList = new HashMap<>();
             HashMap<String, Double> rtfInnerMap = new HashMap<>();
 
-            for(String word: outerHashMap.get(file).keySet()){
+            for(String word: lexicon){
+
+                if(idfWordMap.get(word) == null){continue;}
 
                 double rtf = RTF(word, file);
                 rtfInnerMap.put(word, rtf);
-                double idf = IDF(word);
+                double idf = idfWordMap.get(word);
                 
                 double rtfIdf = rtf * idf; 
 
-                if(rtfIdf == 0){
-                    rtfIdf++;
-                }
+                
                 ValuesforWords save = new ValuesforWords(rtfIdf, rtf); 
 
                 wordList.put(word, save);
@@ -294,6 +308,20 @@ public class Main {
         }
 
 
+    }
+
+    public static void generateIdfMap(){
+
+        HashMap<String, Double> idfMap = new HashMap<>();
+
+        for(String word: lexicon){
+            
+            Double idf = IDF(word);
+
+            idfMap.put(word, idf );
+        }
+
+        idfWordMap = idfMap;
     }
 
 
@@ -313,7 +341,7 @@ public class Main {
     
 
     
-    
+    //used for idf 
     public static double containsWord(String word){ 
         double truecount = 0;
         for (File file: outerHashMap.keySet()){

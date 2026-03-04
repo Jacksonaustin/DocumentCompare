@@ -9,3 +9,4 @@ Endpoint scans found no ransomware, but browser tokens may have been exposed.
 Keywords for analysis: phishing, credentials, MFA, session revocation, logs,
 IOC (indicator of compromise), containment, remediation, and user awareness
 training.
+help

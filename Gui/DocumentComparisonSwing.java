@@ -4,12 +4,29 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.*; 
 import java.awt.BorderLayout;
+import java.awt.GridLayout;
 
 
 public class DocumentComparisonSwing extends Object {
 
     public  static HashMap<File, Double> cos; 
     public static  File cd;
+
+
+    public static  class Prior {
+        double value; 
+        File doc; 
+
+
+        public Prior(File doc, double value){
+
+            this.value = value;
+            this.doc = doc;
+
+        }
+
+    
+    }
 
 
 
@@ -45,17 +62,25 @@ public class DocumentComparisonSwing extends Object {
 
         model.addColumn("Document");
         model.addColumn("CosineSim");
+
+        PriorityQueue<Prior> descOrder = new PriorityQueue<>((a,b) -> Double.compare(a.value, b.value)); 
+      
+        //add each document and cosine Sim to a priorty queue  
         for(File doc: cos.keySet()){
+
+            descOrder.add(new Prior(doc, cos.get(doc)));
+            
+        }
+
+        //add to table decesnding order 
+        while(!descOrder.isEmpty()){
             Vector<Object> count = new Vector<>();
-
-
-            count.add(cos.get(doc)); 
-            count.add(0, doc);
+            Prior p = descOrder.poll();
+            count.add(p.value);
+            count.add(0, p.doc);
             model.addRow(count);
         }
 
-
-      
 
 
         //search for most common doc 
@@ -79,11 +104,19 @@ public class DocumentComparisonSwing extends Object {
 
         JTable table = new JTable(model);
         JScrollPane scrollPane = new JScrollPane(table);
-        JTextField match = new JTextField("Best math Doc is " + best.toString() + "Similarity: " + greatestValue); 
+        String formatted = String.format("%.4f", greatestValue);
+        JTextField match = new JTextField("Best match:  " + best.toString() + " Similarity: " + formatted); 
         frame.setLayout(new BorderLayout());
+        JTextField comp = new JTextField("Comparing To: " + cd.toString()); 
+        JPanel p = new JPanel(); 
+
+        p.setLayout(new GridLayout(1,2));
+        p.add(comp);
+        p.add(match);
         
         frame.add(scrollPane, BorderLayout.CENTER);
-        frame.add(match, BorderLayout.SOUTH);
+        frame.add(p, BorderLayout.SOUTH);
+     
         
         
         frame.setSize(1000, 500);
